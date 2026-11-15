@@ -8,14 +8,18 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 app.secret_key = "event_system_secret_key_prod"
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "event_system.db")
+SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
+
 def get_db():
-    db_exists = os.path.exists("event_system.db")
-    conn = sqlite3.connect("event_system.db")
+    db_exists = os.path.exists(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     
     if not db_exists:
-        with open("schema.sql", "r") as f:
+        with open(SCHEMA_PATH, "r") as f:
             conn.executescript(f.read())
         conn.execute(
             "INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)",

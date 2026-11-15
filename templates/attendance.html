@@ -1,19 +1,38 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 style="font-size: 18px; text-transform: uppercase; margin-bottom: 16px;">Attendance Roster Control</h2>
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+    <h2 style="font-size: 18px; text-transform: uppercase; margin: 0;">Attendance Roster Control</h2>
+    <a href="{{ url_for('scanner', event_id=selected_event_id) if selected_event_id else url_for('scanner') }}" class="btn" style="text-decoration: none;">
+        📷 Open QR Scanner
+    </a>
+</div>
 
-<form method="GET" action="{{ url_for('attendance') }}" style="max-width: 440px; margin-bottom: 28px;">
+<form method="GET" action="{{ url_for('attendance') }}" id="eventSelectForm" style="max-width: 440px; margin-bottom: 28px;">
     <div class="form-group">
-        <label for="event_id">Select Event to Load Roster</label>
-        <div class="custom-select-wrapper">
-            <select name="event_id" id="event_id" class="custom-select" onchange="this.form.submit()" required>
-                <option value="" disabled {% if not selected_event_id %}selected{% endif %}>-- Choose an Event --</option>
+        <label>Select Event to Load Roster</label>
+        <div class="custom-dropdown-container">
+            <div class="custom-dropdown-trigger">
+                <span class="selected-label">
+                    {% set ns = namespace(label='-- Choose an Event --') %}
+                    {% for event in events %}
+                        {% if selected_event_id == event.event_id %}
+                            {% set ns.label = event.title ~ ' (' ~ event.event_date ~ ')' %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ ns.label }}
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <input type="hidden" name="event_id" id="event_id" value="{{ selected_event_id or '' }}" onchange="document.getElementById('eventSelectForm').submit()">
+            <div class="custom-dropdown-menu">
                 {% for event in events %}
-                    <option value="{{ event.event_id }}" {% if selected_event_id == event.event_id %}selected{% endif %}>
+                    <div class="custom-dropdown-item" data-value="{{ event.event_id }}">
                         {{ event.title }} ({{ event.event_date }})
-                    </option>
+                    </div>
+                {% else %}
+                    <div class="custom-dropdown-item" data-value="">No events available</div>
                 {% endfor %}
-            </select>
+            </div>
         </div>
     </div>
 </form>
@@ -27,6 +46,7 @@
             <tr>
                 <th>Participant Name</th>
                 <th>Contact</th>
+                <th>Ticket QR</th>
                 <th>Status Marking</th>
             </tr>
         </thead>
@@ -35,6 +55,7 @@
             <tr>
                 <td style="font-weight: 700;">{{ p.name }}</td>
                 <td>{{ p.contact }}</td>
+                <td style="font-family: monospace; font-size: 12px;">{{ p.qr_code }}</td>
                 <td>
                     <!-- Custom Toggle Switch Segmented Control -->
                     <div class="status-toggle-group">
@@ -49,7 +70,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 24px;">
                     No registered participants found for this event.
                 </td>
             </tr>

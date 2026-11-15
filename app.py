@@ -1,8 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Response
 import sqlite3
 import functools
 import os
 import hashlib
+import csv
+import io
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -88,7 +90,7 @@ def events():
     conn.close()
     return render_template("events.html", events=events_list, hosts=hosts_list, min_date=min_date, active_page="events")
 
-# 2. Secret Admin Gateway Login Portal
+# 2. Admin Gateway Login Portal
 @app.route("/secret-gateway-login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
@@ -165,7 +167,12 @@ def admin():
 @app.route("/events/<int:event_id>", methods=["GET", "POST"])
 def event_detail(event_id):
     conn = get_db()
-    event = conn.execute("SELECT e.*, u.username as host_name FROM events e LEFT JOIN users u ON e.host_id = u.user_id WHERE e.event_id = ?", (event_id,)).fetchone()
+    event = conn.execute("""
+        SELECT e.*, u.username as host_name 
+        FROM events e 
+        LEFT JOIN users u ON e.host_id = u.user_id 
+        WHERE e.event_id = ?
+    """, (event_id,)).fetchone()
     min_date = get_min_allowed_date()
 
     if not event:
@@ -205,7 +212,7 @@ def event_detail(event_id):
             return redirect(url_for("events"))
 
     participants = conn.execute("""
-        SELECT p.participant_id, p.name, p.contact, r.attendance_status, r.qr_code, r.registration_id
+        SELECT p.participant_id, p.name, p.contact, p.user_qr, r.attendance_status, r.qr_code, r.registration_id
         FROM participants p
         JOIN registrations r ON p.participant_id = r.participant_id
         WHERE r.event_id = ?
@@ -231,7 +238,7 @@ def unregister_participant(registration_id):
     flash("Registration record not found.", "error")
     return redirect(url_for("events"))
 
-# 6. Register Participant & Unique QR Generation
+# 6. Register Participant & Unique QR Generation (Personal QR + Event Ticket QR)
 @app.route("/register", methods=["GET", "POST"])
 def register():
     conn = get_db()
@@ -261,7 +268,12 @@ def register():
                     if participant:
                         participant_id = participant["participant_id"]
                     else:
-                        cursor.execute("INSERT INTO participants (name, contact) VALUES (?, ?)", (name, contact))
+                        user_hash = hashlib.md5(f"USER-{contact}-{datetime.now().timestamp()}".encode()).hexdigest()[:10].upper()
+                        user_qr_token = f"USR-{user_hash}"
+                        cursor.execute(
+                            "INSERT INTO participants (name, contact, user_qr) VALUES (?, ?, ?)",
+                            (name, contact, user_qr_token)
+                        )
                         participant_id = cursor.lastrowid
 
                     existing_reg = cursor.execute(
@@ -315,7 +327,7 @@ def attendance():
     participants = []
     if selected_event_id:
         participants = conn.execute("""
-            SELECT p.participant_id, p.name, p.contact, r.attendance_status, r.qr_code
+            SELECT p.participant_id, p.name, p.contact, p.user_qr, r.attendance_status, r.qr_code
             FROM participants p
             JOIN registrations r ON p.participant_id = r.participant_id
             WHERE r.event_id = ?
@@ -324,21 +336,46 @@ def attendance():
     conn.close()
     return render_template("attendance.html", events=events_list, participants=participants, selected_event_id=selected_event_id, active_page="attendance")
 
-# 8. User Directory & Individual User Expandable Page Route
+# 8. User Directory (With Per-Event Filter) & Individual User Expandable Page Route
 @app.route("/directory")
 def directory():
     conn = get_db()
-    participants_list = conn.execute("""
-        SELECT p.participant_id, p.name, p.contact,
-               COUNT(r.registration_id) AS events_registered,
-               SUM(CASE WHEN r.attendance_status = 'Present' THEN 1 ELSE 0 END) AS events_attended
-        FROM participants p
-        LEFT JOIN registrations r ON p.participant_id = r.participant_id
-        GROUP BY p.participant_id
-        ORDER BY p.name ASC
-    """).fetchall()
+    selected_event_id = request.args.get("event_id", type=int)
+    events_list = conn.execute("SELECT event_id, title, event_date FROM events ORDER BY event_date ASC").fetchall()
+
+    if selected_event_id:
+        participants_list = conn.execute("""
+            SELECT p.participant_id, p.name, p.contact, p.user_qr,
+                   1 AS events_registered,
+                   CASE WHEN r.attendance_status = 'Present' THEN 1 ELSE 0 END AS events_attended,
+                   r.attendance_status AS event_status,
+                   r.qr_code AS event_qr
+            FROM participants p
+            JOIN registrations r ON p.participant_id = r.participant_id
+            WHERE r.event_id = ?
+            ORDER BY p.name ASC
+        """, (selected_event_id,)).fetchall()
+    else:
+        participants_list = conn.execute("""
+            SELECT p.participant_id, p.name, p.contact, p.user_qr,
+                   COUNT(r.registration_id) AS events_registered,
+                   SUM(CASE WHEN r.attendance_status = 'Present' THEN 1 ELSE 0 END) AS events_attended,
+                   NULL AS event_status,
+                   NULL AS event_qr
+            FROM participants p
+            LEFT JOIN registrations r ON p.participant_id = r.participant_id
+            GROUP BY p.participant_id
+            ORDER BY p.name ASC
+        """).fetchall()
+
     conn.close()
-    return render_template("user.html", participants_list=participants_list, active_page="directory")
+    return render_template(
+        "user.html",
+        participants_list=participants_list,
+        events=events_list,
+        selected_event_id=selected_event_id,
+        active_page="directory"
+    )
 
 @app.route("/user/<int:participant_id>")
 def user_detail(participant_id):
@@ -376,7 +413,7 @@ def summary():
         FROM events e
         LEFT JOIN registrations r ON e.event_id = r.event_id
         GROUP BY e.event_id
-        ORDER BY e.event_date DESC
+        ORDER BY e.event_date ASC
     """).fetchall()
 
     total_events = len(summary_data)
@@ -387,6 +424,23 @@ def summary():
     turnout_rate = round((total_present / total_registrations * 100), 1) if total_registrations > 0 else 0
     capacity_usage = round((total_registrations / total_capacity * 100), 1) if total_capacity > 0 else 0
 
+    # Generate real SVG polyline points based on turnout percentages per event (chronological)
+    trend_points = []
+    if total_events == 1:
+        rate = (summary_data[0]["total_present"] / summary_data[0]["total_registered"] * 100) if summary_data[0]["total_registered"] > 0 else 0
+        y = 36 - (rate / 100 * 30)
+        trend_points.append(f"0,{y:.1f}")
+        trend_points.append(f"100,{y:.1f}")
+    elif total_events > 1:
+        step_x = 100 / (total_events - 1)
+        for idx, item in enumerate(summary_data):
+            rate = (item["total_present"] / item["total_registered"] * 100) if item["total_registered"] > 0 else 0
+            x = idx * step_x
+            y = 36 - (rate / 100 * 30)  # Maps 0%-100% to SVG Y-axis (36 down to 6)
+            trend_points.append(f"{x:.1f},{y:.1f}")
+
+    sparkline_polyline = " ".join(trend_points) if trend_points else "0,35 100,35"
+
     recent_activity = conn.execute("""
         SELECT p.name AS participant_name, e.title AS event_title, r.attendance_status
         FROM registrations r
@@ -396,10 +450,191 @@ def summary():
     """).fetchall()
 
     conn.close()
-    return render_template("summary.html", summary=summary_data, total_events=total_events,
-                           total_registrations=total_registrations, total_present=total_present,
-                           turnout_rate=turnout_rate, capacity_usage=capacity_usage,
-                           recent_activity=recent_activity, active_page="summary")
+    # Reverse summary_data for table display (newest first) while keeping sparkline chronological
+    return render_template(
+        "summary.html",
+        summary=list(reversed(summary_data)),
+        total_events=total_events,
+        total_registrations=total_registrations,
+        total_present=total_present,
+        turnout_rate=turnout_rate,
+        capacity_usage=capacity_usage,
+        sparkline_polyline=sparkline_polyline,
+        recent_activity=recent_activity,
+        active_page="summary"
+    )
+
+# 10. Individual Event Multi-Graph Analytics
+@app.route("/analytics/<int:event_id>")
+def event_analytics(event_id):
+    conn = get_db()
+    event = conn.execute("""
+        SELECT e.*, u.username AS host_name
+        FROM events e
+        LEFT JOIN users u ON e.host_id = u.user_id
+        WHERE e.event_id = ?
+    """, (event_id,)).fetchone()
+
+    if not event:
+        conn.close()
+        flash("Event not found.", "error")
+        return redirect(url_for("summary"))
+
+    participants = conn.execute("""
+        SELECT p.participant_id, p.name, p.contact, p.user_qr, r.attendance_status, r.qr_code
+        FROM participants p
+        JOIN registrations r ON p.participant_id = r.participant_id
+        WHERE r.event_id = ?
+        ORDER BY r.registration_id ASC
+    """, (event_id,)).fetchall()
+
+    total_reg = len(participants)
+    present_count = sum(1 for p in participants if p["attendance_status"] == "Present")
+    absent_count = total_reg - present_count
+    unfilled_seats = max(0, event["capacity"] - total_reg)
+
+    turnout_pct = round((present_count / total_reg * 100), 1) if total_reg > 0 else 0
+    absent_pct = round((absent_count / total_reg * 100), 1) if total_reg > 0 else 0
+    capacity_pct = round((total_reg / event["capacity"] * 100), 1) if event["capacity"] > 0 else 0
+
+    # Cumulative Check-in Line Coordinates across registration sequence
+    cum_points = []
+    if total_reg > 0:
+        running_present = 0
+        step_x = 280 / max(1, total_reg - 1) if total_reg > 1 else 280
+        for idx, p in enumerate(participants):
+            if p["attendance_status"] == "Present":
+                running_present += 1
+            x = 10 + (idx * step_x) if total_reg > 1 else 150
+            y = 110 - ((running_present / max(1, present_count)) * 90) if present_count > 0 else 110
+            cum_points.append((f"{x:.1f}", f"{y:.1f}", p["name"], running_present))
+
+    polyline_str = " ".join([f"{pt[0]},{pt[1]}" for pt in cum_points])
+
+    conn.close()
+    return render_template(
+        "event_analytics.html",
+        event=event,
+        participants=participants,
+        total_reg=total_reg,
+        present_count=present_count,
+        absent_count=absent_count,
+        unfilled_seats=unfilled_seats,
+        turnout_pct=turnout_pct,
+        absent_pct=absent_pct,
+        capacity_pct=capacity_pct,
+        cum_points=cum_points,
+        polyline_str=polyline_str,
+        active_page="summary"
+    )
+
+# 11. Export Event Attendance as CSV
+@app.route("/analytics/<int:event_id>/export/csv")
+def export_event_csv(event_id):
+    conn = get_db()
+    event = conn.execute("SELECT title, event_date, venue FROM events WHERE event_id = ?", (event_id,)).fetchone()
+    
+    if not event:
+        conn.close()
+        flash("Event not found.", "error")
+        return redirect(url_for("summary"))
+
+    participants = conn.execute("""
+        SELECT p.participant_id, p.name, p.contact, p.user_qr, r.attendance_status, r.qr_code
+        FROM participants p
+        JOIN registrations r ON p.participant_id = r.participant_id
+        WHERE r.event_id = ?
+        ORDER BY p.name ASC
+    """, (event_id,)).fetchall()
+    conn.close()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    writer.writerow(["Event Title", event["title"]])
+    writer.writerow(["Date", event["event_date"]])
+    writer.writerow(["Venue", event["venue"]])
+    writer.writerow([])
+    
+    writer.writerow(["Participant ID", "Full Name", "Contact Information", "Personal User QR", "Event Ticket QR", "Attendance Status"])
+    for p in participants:
+        writer.writerow([p["participant_id"], p["name"], p["contact"], p["user_qr"], p["qr_code"], p["attendance_status"]])
+
+    safe_title = "".join(c if c.isalnum() else "_" for c in event["title"])
+    filename = f"{safe_title}_attendance.csv"
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+# 12. QR Scanner Page
+@app.route("/scanner")
+def scanner():
+    conn = get_db()
+    events_list = conn.execute("SELECT * FROM events ORDER BY event_date ASC").fetchall()
+    selected_event_id = request.args.get("event_id", type=int)
+    conn.close()
+    return render_template(
+        "scanner.html",
+        events=events_list,
+        selected_event_id=selected_event_id,
+        active_page="scanner"
+    )
+
+# 13. QR Verification & Auto Check-in API
+@app.route("/api/scan-qr", methods=["POST"])
+def api_scan_qr():
+    data = request.get_json() or {}
+    scanned_code = data.get("qr_code", "").strip()
+    event_id = data.get("event_id")
+
+    if not scanned_code or not event_id:
+        return jsonify({"status": "error", "message": "Select an event and scan a valid QR code."}), 400
+
+    conn = get_db()
+    # Match either the event-specific registration QR (QR-...) OR the participant's personal QR (USR-...)
+    reg = conn.execute("""
+        SELECT r.registration_id, r.attendance_status, r.qr_code,
+               p.name, p.contact, p.user_qr, e.title AS event_title
+        FROM registrations r
+        JOIN participants p ON r.participant_id = p.participant_id
+        JOIN events e ON r.event_id = e.event_id
+        WHERE r.event_id = ? AND (r.qr_code = ? OR p.user_qr = ?)
+    """, (event_id, scanned_code, scanned_code)).fetchone()
+
+    if not reg:
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": f"Invalid QR ({scanned_code}): Not registered for this event."
+        }), 404
+
+    if reg["attendance_status"] == "Present":
+        conn.close()
+        return jsonify({
+            "status": "warning",
+            "message": f"{reg['name']} is already checked in (Present).",
+            "participant": reg["name"],
+            "contact": reg["contact"],
+            "event": reg["event_title"]
+        })
+
+    conn.execute(
+        "UPDATE registrations SET attendance_status = 'Present' WHERE registration_id = ?",
+        (reg["registration_id"],)
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "status": "success",
+        "message": f"Verified! {reg['name']} marked as Present.",
+        "participant": reg["name"],
+        "contact": reg["contact"],
+        "event": reg["event_title"]
+    })
 
 if __name__ == "__main__":
     app.run(debug=True, port=5050)

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+        <h2 style="margin: 0; font-size: 20px; font-weight: 800;">QR Attendance Scanner</h2>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-secondary);">
+            Scan a participant's Personal QR (<code>USR-...</code>) or Event Ticket QR (<code>QR-...</code>) to verify and mark Present
+        </p>
+    </div>
+</div>
+
+<!-- Step 1: Select Event -->
+<div class="form-group" style="max-width: 460px;">
+    <label>Active Event for Check-In</label>
+    <div class="custom-dropdown-container">
+        <div class="custom-dropdown-trigger">
+            <span class="selected-label">
+                {% set ns = namespace(label='-- Choose Event to Scan --') %}
+                {% for ev in events %}
+                    {% if selected_event_id == ev.event_id %}
+                        {% set ns.label = ev.title ~ ' (' ~ ev.event_date ~ ')' %}
+                    {% endif %}
+                {% endfor %}
+                {{ ns.label }}
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+        <input type="hidden" id="scan_event_id" value="{{ selected_event_id or '' }}">
+        <div class="custom-dropdown-menu">
+            {% for ev in events %}
+                <div class="custom-dropdown-item" data-value="{{ ev.event_id }}">{{ ev.title }} ({{ ev.event_date }})</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="scanner-grid">
+    <!-- Camera Viewport -->
+    <div class="scanner-box">
+        <div id="qr-reader" style="width: 100%; border-radius: 12px; overflow: hidden;"></div>
+        <div style="display: flex; gap: 10px; margin-top: 14px;">
+            <button type="button" id="startCamBtn" onclick="startCamera()">Start Camera</button>
+            <button type="button" id="stopCamBtn" class="danger" onclick="stopCamera()" style="display: none;">Stop Camera</button>
+        </div>
+
+        <!-- Manual / Hardware Scanner Input -->
+        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+            <label for="manual_qr_input">Manual Code / USB Scanner Input</label>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="manual_qr_input" placeholder="e.g. QR-A1B2C3D4E5F6 or USR-..." onkeydown="if(event.key==='Enter'){ verifyCode(this.value); this.value=''; }">
+                <button type="button" onclick="const inp=document.getElementById('manual_qr_input'); verifyCode(inp.value); inp.value='';">Verify</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Scan Status & Recent Check-ins -->
+    <div class="scan-result-panel">
+        <h3 style="font-size: 14px; text-transform: uppercase; color: var(--text-secondary); margin-top: 0;">Verification Status</h3>
+        <div id="scanFeedback" class="scan-feedback idle">
+            Waiting for QR scan...
+        </div>
+
+        <h3 style="font-size: 14px; text-transform: uppercase; color: var(--text-secondary); margin-top: 24px;">Session Check-In Log</h3>
+        <div id="scanLogList" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+            <p id="emptyLogText" style="font-size: 13px; color: var(--text-secondary); margin: 0;">No scans recorded in this session yet.</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .scanner-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 24px;
+        margin-top: 20px;
+    }
+    @media (max-width: 850px) { .scanner-grid { grid-template-columns: 1fr; } }
+
+    .scanner-box, .scan-result-panel {
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 20px;
+    }
+
+    .scan-feedback {
+        padding: 18px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 15px;
+        border: 1px solid var(--border-color);
+        background: #ffffff;
+    }
+    .scan-feedback.idle { color: var(--text-secondary); }
+    .scan-feedback.success { background: #dcfce7; color: #15803d; border-color: #86efac; }
+    .scan-feedback.warning { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+    .scan-feedback.error { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+
+    .log-entry {
+        background: #ffffff;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        font-size: 13px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+    let html5QrCode = null;
+    let lastScannedCode = "";
+    let lastScanTime = 0;
+
+    function startCamera() {
+        const eventId = document.getElementById('scan_event_id').value;
+        if (!eventId) {
+            showFeedback("error", "Please select an event first before starting the camera.");
+            return;
+        }
+
+        html5QrCode = new Html5Qrcode("qr-reader");
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 240, height: 240 } },
+            (decodedText) => {
+                const now = Date.now();
+                // Prevent duplicate rapid triggers within 3 seconds for the same code
+                if (decodedText === lastScannedCode && (now - lastScanTime) < 3000) return;
+                lastScannedCode = decodedText;
+                lastScanTime = now;
+                verifyCode(decodedText);
+            },
+            () => {}
+        ).then(() => {
+            document.getElementById('startCamBtn').style.display = 'none';
+            document.getElementById('stopCamBtn').style.display = 'inline-flex';
+        }).catch(err => {
+            showFeedback("error", "Camera access denied or unavailable: " + err);
+        });
+    }
+
+    function stopCamera() {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                html5QrCode.clear();
+                document.getElementById('startCamBtn').style.display = 'inline-flex';
+                document.getElementById('stopCamBtn').style.display = 'none';
+            });
+        }
+    }
+
+    function verifyCode(code) {
+        const eventId = document.getElementById('scan_event_id').value;
+        if (!eventId) {
+            showFeedback("error", "Select an event from the dropdown first.");
+            return;
+        }
+        if (!code.trim()) return;
+
+        fetch("{{ url_for('api_scan_qr') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ qr_code: code.trim(), event_id: eventId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            showFeedback(data.status, data.message);
+            if (data.status === "success" || data.status === "warning") {
+                addLogEntry(data.participant, data.status, code.trim());
+            }
+        })
+        .catch(() => showFeedback("error", "Network error while verifying QR code."));
+    }
+
+    function showFeedback(type, message) {
+        const box = document.getElementById('scanFeedback');
+        box.className = "scan-feedback " + type;
+        box.innerText = message;
+    }
+
+    function addLogEntry(name, status, code) {
+        const emptyText = document.getElementById('emptyLogText');
+        if (emptyText) emptyText.remove();
+
+        const list = document.getElementById('scanLogList');
+        const item = document.createElement('div');
+        item.className = 'log-entry';
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        item.innerHTML = `
+            <div>
+                <strong>${name}</strong>
+                <div style="font-size:11px; color:var(--text-secondary); font-family:monospace;">${code}</div>
+            </div>
+            <span style="font-size:12px; font-weight:700; color:${status === 'success' ? '#15803d' : '#b45309'};">
+                ${status === 'success' ? 'Checked In' : 'Already In'} • ${timeStr}
+            </span>
+        `;
+        list.prepend(item);
+    }
+</script>
+{% endblock %}

@@ -23,7 +23,8 @@ CREATE TABLE events (
 CREATE TABLE participants (
     participant_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    contact TEXT NOT NULL UNIQUE
+    contact TEXT NOT NULL UNIQUE,
+    user_qr TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE registrations (

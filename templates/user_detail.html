@@ -5,9 +5,29 @@
     <a href="{{ url_for('directory') }}" style="color: var(--text-secondary); text-decoration: none; font-weight: 700;">← Back to Directory</a>
 </div>
 
-<div style="background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border-color);">
-    <p style="margin: 0 0 4px 0; font-size: 13px; color: var(--text-secondary);">CONTACT INFORMATION</p>
-    <p style="margin: 0; font-size: 16px; font-weight: 700;">{{ participant.contact }}</p>
+<!-- User Info + Personal Master QR Code -->
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; background: #f8fafc; padding: 20px; border-radius: 14px; margin-bottom: 24px; border: 1px solid var(--border-color);">
+    <div>
+        <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; color: var(--text-secondary);">CONTACT INFORMATION</p>
+        <p style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700;">{{ participant.contact }}</p>
+        <span style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; font-family: monospace;">
+            Master ID: {{ participant.user_qr }}
+        </span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 16px; background: #ffffff; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--border-color);">
+        <div class="qr-click-box" onclick="openQrModal('{{ participant.user_qr }}', 'Personal Master Pass', '{{ participant.name }}', 'All Registered Events')" title="Click to enlarge QR">
+            <div class="qr-render" data-qr="{{ participant.user_qr }}"></div>
+            <span class="zoom-hint">🔍 Click to Expand</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-secondary);">PERSONAL USER QR</span>
+            <button type="button" style="padding: 8px 14px; font-size: 12px;"
+                onclick="downloadQrTemplate('{{ participant.user_qr }}', 'MASTER ACCESS PASS', '{{ participant.name }}', '{{ participant.contact }}', 'Valid across all registered events')">
+                ⬇ Download Pass
+            </button>
+        </div>
+    </div>
 </div>
 
 <h3>Registered Events (Click to Expand)</h3>
@@ -24,33 +44,39 @@
                 <span style="padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px; {% if evt.attendance_status == 'Present' %}background: #dcfce7; color: #15803d;{% else %}background: #fee2e2; color: #b91c1c;{% endif %}">
                     {{ evt.attendance_status }}
                 </span>
-                <span class="chevron-icon">▼</span>
+                <span>▼</span>
             </div>
         </div>
 
         <div class="event-card-body" id="evt-{{ evt.event_id }}">
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+            <div style="display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 20px; align-items: center;">
                 <div>
                     <p style="margin: 6px 0;"><strong>Venue:</strong> {{ evt.venue }}</p>
                     <p style="margin: 6px 0;"><strong>Assigned Host:</strong> {{ evt.host_name if evt.host_name else 'Unassigned' }}</p>
                     <p style="margin: 6px 0;"><strong>Capacity Limit:</strong> {{ evt.capacity }}</p>
 
-                    <form method="POST" action="{{ url_for('unregister_participant', registration_id=evt.registration_id) }}" style="margin-top: 16px;">
-                        <button type="submit" class="danger" onclick="return confirm('Unregister user from this event?')">
-                            Unregister User
+                    <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;">
+                        <button type="button" style="padding: 9px 14px; font-size: 13px;"
+                            onclick="downloadQrTemplate('{{ evt.qr_code }}', '{{ evt.title }}', '{{ participant.name }}', 'Date: {{ evt.event_date }}', 'Venue: {{ evt.venue }}')">
+                            ⬇ Download Ticket Template
                         </button>
-                    </form>
+
+                        <form method="POST" action="{{ url_for('unregister_participant', registration_id=evt.registration_id) }}" style="margin: 0;">
+                            <button type="submit" class="danger" style="padding: 9px 14px; font-size: 13px;" onclick="return confirm('Unregister user from this event?')">
+                                Unregister User
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
-                <!-- Unique Per-Event Attendant QR Code -->
-                <div style="text-align: center; background: #ffffff; padding: 12px; border-radius: 12px; border: 1px solid var(--border-color);">
-                    <p style="font-size: 11px; font-weight: 800; color: var(--text-secondary); margin: 0 0 6px 0;">UNIQUE QR ACCESS CODE</p>
-                    <svg width="100" height="100" viewBox="0 0 100 100">
-                        <rect width="100" height="100" fill="#ffffff"/>
-                        <!-- Deterministic QR Grid -->
-                        <path d="M10 10h30v30h-30z M15 15h20v20h-20z M60 10h30v30h-30z M65 15h20v20h-20z M10 60h30v30h-30z M15 65h20v20h-20z M50 50h10v10h-10z M70 70h20v20h-20z M50 70h10v20h-10z M80 50h10v10h-10z" fill="#0f172a"/>
-                    </svg>
-                    <p style="font-size: 10px; font-family: monospace; margin: 4px 0 0 0;">{{ evt.qr_code }}</p>
+                <!-- Event-Specific Scannable QR Code (Click to Expand) -->
+                <div style="text-align: center; background: #ffffff; padding: 14px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <p style="font-size: 10px; font-weight: 800; color: var(--text-secondary); margin: 0 0 8px 0;">EVENT TICKET QR</p>
+                    <div class="qr-click-box" onclick="openQrModal('{{ evt.qr_code }}', '{{ evt.title }}', '{{ participant.name }}', '{{ evt.event_date }} • {{ evt.venue }}')" title="Click to enlarge QR">
+                        <div class="qr-render" data-qr="{{ evt.qr_code }}" style="display: inline-block;"></div>
+                        <span class="zoom-hint">🔍 Click to Expand</span>
+                    </div>
+                    <p style="font-size: 11px; font-family: monospace; font-weight: 700; margin: 6px 0 0 0;">{{ evt.qr_code }}</p>
                 </div>
             </div>
         </div>
@@ -60,24 +86,220 @@
     {% endfor %}
 </div>
 
+<!-- Enlarged QR Code Modal -->
+<div class="qr-modal-overlay" id="qrExpandModal" onclick="closeQrModal(event)">
+    <div class="qr-modal-card" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 800;">
+                ⚡ ATTENDANCE PRO PASS
+            </span>
+            <button type="button" onclick="document.getElementById('qrExpandModal').classList.remove('open')" style="background: #f1f5f9; color: #0f172a; padding: 6px 10px; font-size: 12px;">✕</button>
+        </div>
+
+        <h3 id="modalEventTitle" style="margin: 4px 0; font-size: 18px; font-weight: 800;">Event Title</h3>
+        <p id="modalParticipantName" style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-secondary);">Participant Name</p>
+
+        <div id="modalQrTarget" style="display: inline-block; padding: 16px; background: #ffffff; border: 2px solid #0f172a; border-radius: 16px; margin: 8px 0;"></div>
+
+        <p id="modalQrCodeText" style="font-family: monospace; font-size: 14px; font-weight: 800; margin: 10px 0 4px 0; letter-spacing: 0.05em;"></p>
+        <p id="modalEventMeta" style="font-size: 12px; color: var(--text-secondary); margin: 0 0 18px 0;"></p>
+
+        <button type="button" id="modalDownloadBtn" style="width: 100%;">⬇ Download Branded QR Template</button>
+    </div>
+</div>
+
+<!-- Hidden off-screen QR container used to generate high-res QR canvas for template downloads -->
+<div id="hiddenQrGenerator" style="display: none;"></div>
+
 <style>
-    .expandable-event-card {
-        background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;
-    }
-    .event-card-header {
-        padding: 16px 20px; background: #ffffff; cursor: pointer; display: flex;
-        justify-content: space-between; align-items: center; user-select: none;
-    }
+    .expandable-event-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+    .event-card-header { padding: 16px 20px; background: #ffffff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
     .event-card-header:hover { background: #f8fafc; }
-    .event-card-body {
-        display: none; padding: 20px; background: #f8fafc; border-top: 1px solid var(--border-color);
-    }
+    .event-card-body { display: none; padding: 20px; background: #f8fafc; border-top: 1px solid var(--border-color); }
     .event-card-body.open { display: block; }
+
+    .qr-click-box {
+        cursor: pointer;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        transition: transform 150ms ease;
+    }
+    .qr-click-box:hover { transform: scale(1.04); }
+    .zoom-hint {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--accent-hover);
+        margin-top: 4px;
+    }
+
+    /* Enlarged QR Modal */
+    .qr-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        padding: 16px;
+    }
+    .qr-modal-overlay.open { display: flex; }
+
+    .qr-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 360px;
+        border-radius: 24px;
+        padding: 24px;
+        text-align: center;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: popIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes popIn {
+        from { opacity: 0; transform: scale(0.94); }
+        to { opacity: 1; transform: scale(1); }
+    }
 </style>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     function toggleCard(id) {
         document.getElementById(id).classList.toggle('open');
+    }
+
+    // Render all inline QR thumbnails on load
+    document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll(".qr-render").forEach(el => {
+            const code = el.getAttribute("data-qr");
+            if (code) {
+                new QRCode(el, {
+                    text: code,
+                    width: 92,
+                    height: 92,
+                    colorDark: "#0f172a",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
+        });
+    });
+
+    // Open Enlarged Modal
+    function openQrModal(code, eventTitle, participantName, metaText) {
+        document.getElementById('modalEventTitle').innerText = eventTitle;
+        document.getElementById('modalParticipantName').innerText = participantName;
+        document.getElementById('modalQrCodeText').innerText = code;
+        document.getElementById('modalEventMeta').innerText = metaText;
+
+        const target = document.getElementById('modalQrTarget');
+        target.innerHTML = '';
+        new QRCode(target, {
+            text: code,
+            width: 210,
+            height: 210,
+            colorDark: "#0f172a",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        document.getElementById('modalDownloadBtn').onclick = () => {
+            downloadQrTemplate(code, eventTitle, participantName, metaText, '');
+        };
+
+        document.getElementById('qrExpandModal').classList.add('open');
+    }
+
+    function closeQrModal(e) {
+        if (e.target.id === 'qrExpandModal') {
+            document.getElementById('qrExpandModal').classList.remove('open');
+        }
+    }
+
+    // Generate & Download Branded Pass Template (PNG)
+    function downloadQrTemplate(code, title, participantName, line1, line2) {
+        const hiddenDiv = document.getElementById('hiddenQrGenerator');
+        hiddenDiv.innerHTML = '';
+        new QRCode(hiddenDiv, {
+            text: code,
+            width: 260,
+            height: 260,
+            colorDark: "#0f172a",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        setTimeout(() => {
+            const qrCanvas = hiddenDiv.querySelector('canvas');
+            if (!qrCanvas) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 820;
+            const ctx = canvas.getContext('2d');
+
+            // Background Card
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Top Brand Header Banner (Amber Gradient)
+            const grad = ctx.createLinearGradient(0, 0, 600, 140);
+            grad.addColorStop(0, '#f59e0b');
+            grad.addColorStop(1, '#d97706');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 600, 140);
+
+            // Header Text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⚡ ATTENDANCE PRO', 300, 68);
+            ctx.font = '600 16px sans-serif';
+            ctx.fillText('OFFICIAL ENTRY & VERIFICATION PASS', 300, 102);
+
+            // Event / Pass Title
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.fillText(title.toUpperCase(), 300, 205);
+
+            // Participant Name
+            ctx.fillStyle = '#4f46e5';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.fillText(participantName, 300, 250);
+
+            // QR Code Frame
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(150, 290, 300, 300);
+            ctx.drawImage(qrCanvas, 170, 310, 260, 260);
+
+            // Token String
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 22px monospace';
+            ctx.fillText(code, 300, 635);
+
+            // Metadata Lines
+            ctx.fillStyle = '#64748b';
+            ctx.font = '600 17px sans-serif';
+            if (line1) ctx.fillText(line1, 300, 685);
+            if (line2) ctx.fillText(line2, 300, 715);
+
+            // Footer Border
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 760, 600, 60);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 14px sans-serif';
+            ctx.fillText('Present this QR code at the event scanner for instant check-in', 300, 795);
+
+            // Trigger Download
+            const link = document.createElement('a');
+            const safeName = participantName.replace(/[^a-z0-9]/gi, '_');
+            link.download = `${safeName}_${code}_Pass.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }, 50);
     }
 </script>
 {% endblock %}

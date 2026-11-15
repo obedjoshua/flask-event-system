@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h2 style="margin: 0; font-size: 20px; font-weight: 800;">Analytics & Activity Hub</h2>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-secondary);">Real-time attendance metrics, capacity usage, and recent event logs</p>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <span class="pill-badge">Live Updates</span>
+    </div>
+</div>
+
+<!-- KPI Cards Grid with Dynamic SVG Circular Progress Charts -->
+<div class="kpi-grid">
+    <!-- Card 1: Attendance Turnout -->
+    <div class="kpi-card">
+        <div class="kpi-info">
+            <span class="kpi-label">Turnout Rate</span>
+            <span class="kpi-value">{{ turnout_rate }}%</span>
+            <span class="kpi-subtext">{{ total_present }} of {{ total_registrations }} checked in</span>
+        </div>
+        <div class="chart-container">
+            <svg viewBox="0 0 36 36" class="circular-chart indigo">
+                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path class="circle" stroke-dasharray="{{ turnout_rate }}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+        </div>
+    </div>
+
+    <!-- Card 2: Capacity Utilization -->
+    <div class="kpi-card">
+        <div class="kpi-info">
+            <span class="kpi-label">Capacity Used</span>
+            <span class="kpi-value">{{ capacity_usage }}%</span>
+            <span class="kpi-subtext">{{ total_registrations }} seats booked</span>
+        </div>
+        <div class="chart-container">
+            <svg viewBox="0 0 36 36" class="circular-chart blue">
+                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path class="circle" stroke-dasharray="{{ capacity_usage }}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+        </div>
+    </div>
+
+    <!-- Card 3: Total Active Events -->
+    <div class="kpi-card">
+        <div class="kpi-info">
+            <span class="kpi-label">Active Events</span>
+            <span class="kpi-value">{{ total_events }}</span>
+            <span class="kpi-subtext">Configured in system</span>
+        </div>
+        <div class="sparkline-box">
+            <svg viewBox="0 0 100 40" class="sparkline">
+                <path d="M0 30 Q 25 10, 50 25 T 100 5" fill="none" stroke="var(--accent-primary)" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+        </div>
+    </div>
+</div>
+
+<!-- Two Column Layout: Detailed Table & Activity Feed -->
+<div class="analytics-layout">
+    <!-- Main Events Data Table -->
+    <div class="table-section">
+        <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 14px;">Event Attendance Breakdown</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Event Title</th>
+                    <th>Date</th>
+                    <th>Capacity</th>
+                    <th>Registered</th>
+                    <th>Present</th>
+                    <th>Turnout</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in summary %}
+                <tr>
+                    <td style="font-weight: 700; color: var(--text-primary);">{{ item.title }}</td>
+                    <td>{{ item.event_date }}</td>
+                    <td>{{ item.capacity }}</td>
+                    <td>{{ item.total_registered }}</td>
+                    <td style="color: var(--success-text); font-weight: 700;">{{ item.total_present }}</td>
+                    <td>
+                        {% if item.total_registered > 0 %}
+                            {% set rate = ((item.total_present / item.total_registered) * 100) | round(1) %}
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill" style="width: {{ rate }}%;"></div>
+                            </div>
+                            <span style="font-size: 12px; font-weight: 700; margin-left: 6px;">{{ rate }}%</span>
+                        {% else %}
+                            <span style="color: var(--text-secondary); font-size: 12px;">N/A</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                        No summary records recorded.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Live Activity Timeline Widget -->
+    <div class="timeline-section">
+        <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 14px;">Recent Activity Stream</h3>
+        <div class="timeline-list">
+            {% for act in recent_activity %}
+            <div class="timeline-item">
+                <div class="timeline-dot {% if act.attendance_status == 'Present' %}dot-success{% else %}dot-default{% endif %}"></div>
+                <div class="timeline-content">
+                    <span class="timeline-user">{{ act.participant_name }}</span>
+                    <span class="timeline-action">{{ act.activity_text }} for <strong>{{ act.event_title }}</strong></span>
+                </div>
+            </div>
+            {% else %}
+            <div style="font-size: 13px; color: var(--text-secondary); padding: 12px 0;">
+                No recent activity recorded yet.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .pill-badge {
+        background: #e0e7ff;
+        color: var(--accent-primary);
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: 20px;
+    }
+
+    /* KPI Grid & Donut Charts */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+
+    .kpi-card {
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    }
+
+    .kpi-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .kpi-value {
+        display: block;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 4px 0;
+    }
+
+    .kpi-subtext {
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+
+    /* SVG Radial Charts */
+    .chart-container {
+        width: 54px;
+        height: 54px;
+    }
+
+    .circular-chart {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+    }
+
+    .circle-bg {
+        fill: none;
+        stroke: #f1f5f9;
+        stroke-width: 3.8;
+    }
+
+    .circle {
+        fill: none;
+        stroke-width: 3.8;
+        stroke-linecap: round;
+        transition: stroke-dasharray 400ms var(--apple-spring);
+    }
+
+    .circular-chart.indigo .circle { stroke: #6366f1; }
+    .circular-chart.blue .circle { stroke: #3b82f6; }
+
+    .sparkline-box {
+        width: 80px;
+        height: 36px;
+    }
+
+    /* Layout Sections */
+    .analytics-layout {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+        .analytics-layout { grid-template-columns: 1fr; }
+    }
+
+    /* Progress Bar Track */
+    .progress-bar-track {
+        display: inline-block;
+        width: 60px;
+        height: 8px;
+        background: #f1f5f9;
+        border-radius: 4px;
+        overflow: hidden;
+        vertical-align: middle;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #6366f1, #4f46e5);
+        border-radius: 4px;
+    }
+
+    /* Timeline Feed */
+    .timeline-section {
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+    }
+
+    .timeline-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-top: 12px;
+    }
+
+    .timeline-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        position: relative;
+    }
+
+    .timeline-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-top: 4px;
+        flex-shrink: 0;
+    }
+
+    .dot-success { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); }
+    .dot-default { background: #94a3b8; }
+
+    .timeline-content {
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .timeline-user {
+        font-weight: 700;
+        color: var(--text-primary);
+        display: block;
+    }
+
+    .timeline-action {
+        color: var(--text-secondary);
+    }
+</style>
+{% endblock %}

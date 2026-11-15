@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Register Participant</h2>
+
+<form method="POST" action="{{ url_for('register') }}">
+    <div class="form-group">
+        <label for="event_id">Select Event</label>
+        <select name="event_id" id="event_id" required>
+            <option value="" disabled selected>-- Choose an Event --</option>
+            {% for event in events %}
+                <option value="{{ event.event_id }}">
+                    {{ event.title }} ({{ event.event_date }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="name">Participant Full Name</label>
+        <input type="text" name="name" id="name" placeholder="e.g. Jane Doe" required>
+    </div>
+
+    <div class="form-group">
+        <label for="contact">Contact Information</label>
+        <input type="text" name="contact" id="contact" placeholder="e.g. jane.doe@example.com or 09123456789" required>
+    </div>
+
+    <div style="margin-top: 24px;">
+        <button type="submit">Submit Registration</button>
+    </div>
+</form>
+
+<style>
+    /* Composite-only interaction styling & custom dropdown tweaks */
+    select {
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%206c6c70' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        background-size: 16px;
+        padding-right: 40px;
+        cursor: pointer;
+    }
+
+    button {
+        will-change: transform;
+        transition: transform 150ms var(--apple-spring), background-color 200ms ease;
+    }
+
+    button:active {
+        transform: scale(0.96);
+    }
+</style>
+{% endblock %}

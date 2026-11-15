@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Participant Directory</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Contact</th>
+            <th>Registered Events</th>
+            <th>Attended</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in participants_list %}
+        <tr>
+            <td>{{ p.participant_id }}</td>
+            <td style="font-weight: 700;">{{ p.name }}</td>
+            <td>{{ p.contact }}</td>
+            <td>{{ p.events_registered }}</td>
+            <td>{{ p.events_attended }}</td>
+            <td>
+                <a href="{{ url_for('user_detail', participant_id=p.participant_id) }}" style="color: var(--accent-hover); font-weight: 700;">
+                    View & Expand Events →
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

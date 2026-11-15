@@ -9,79 +9,82 @@
     </a>
 </div>
 
-<h2>Manage Event Details</h2>
+<h2 style="margin-top: 0; font-size: 20px; font-weight: 800;">Manage Event Details</h2>
 
 <form method="POST" action="{{ url_for('event_detail', event_id=event.event_id) }}">
     <input type="hidden" name="action" value="update">
     
-    <div class="form-group">
-        <label>Event Title</label>
-        <input type="text" name="title" value="{{ event.title }}" required>
+    <div class="detail-form-grid">
+        <div class="form-group">
+            <label>Event Title</label>
+            <input type="text" name="title" value="{{ event.title }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Date</label>
+            <input type="date" name="event_date" value="{{ event.event_date }}" class="styled-date-input" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Venue</label>
+            <input type="text" name="venue" value="{{ event.venue }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Capacity</label>
+            <input type="number" name="capacity" value="{{ event.capacity }}" min="1" required>
+        </div>
     </div>
     
-    <div class="form-group">
-        <label>Date</label>
-        <input type="date" name="event_date" value="{{ event.event_date }}" required>
-    </div>
-    
-    <div class="form-group">
-        <label>Venue</label>
-        <input type="text" name="venue" value="{{ event.venue }}" required>
-    </div>
-    
-    <div class="form-group">
-        <label>Capacity</label>
-        <input type="number" name="capacity" value="{{ event.capacity }}" min="1" required>
-    </div>
-    
-    <div class="button-group">
-        <button type="submit">Update Event</button>
+    <div class="action-buttons-row">
+        <button type="submit" class="mobile-full-btn">Update Event</button>
     </div>
 </form>
 
-<form method="POST" action="{{ url_for('event_detail', event_id=event.event_id) }}" style="margin-top: 16px;">
+<form method="POST" action="{{ url_for('event_detail', event_id=event.event_id) }}" style="margin-top: 12px;">
     <input type="hidden" name="action" value="delete">
-    <button type="submit" class="danger" onclick="return confirm('Are you sure you want to delete this event? This action cannot be undone.')">
+    <button type="submit" class="danger mobile-full-btn" onclick="return confirm('Are you sure you want to delete this event? This action cannot be undone.')">
         Delete Event
     </button>
 </form>
 
-<hr style="margin: 36px 0; border: none; border-top: 1px solid var(--border-color);">
+<hr style="margin: 32px 0; border: none; border-top: 1px solid var(--border-color);">
 
-<h2>Registered Participants</h2>
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Contact</th>
-            <th>Attendance Status</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for p in participants %}
-        <tr>
-            <td>{{ p.participant_id }}</td>
-            <td style="font-weight: 600;">{{ p.name }}</td>
-            <td>{{ p.contact }}</td>
-            <td>
-                <span class="status-badge {% if p.attendance_status == 'Present' %}status-present{% else %}status-absent{% endif %}">
-                    {{ p.attendance_status }}
-                </span>
-            </td>
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 24px;">
-                No participants registered for this event yet.
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<h2 style="font-size: 18px; font-weight: 800; margin-bottom: 14px;">Registered Participants</h2>
+<div class="table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>Attendance Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in participants %}
+            <tr>
+                <td>{{ p.participant_id }}</td>
+                <td style="font-weight: 700;">{{ p.name }}</td>
+                <td>{{ p.contact }}</td>
+                <td>
+                    <span class="status-badge {% if p.attendance_status == 'Present' %}status-present{% else %}status-absent{% endif %}">
+                        {{ p.attendance_status }}
+                    </span>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                    No participants registered for this event yet.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 <style>
-    /* Top back button layout */
     .header-nav {
         margin-bottom: 16px;
     }
@@ -90,50 +93,70 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        color: var(--accent-color);
-        font-weight: 500;
+        color: var(--accent-hover);
+        font-weight: 700;
         font-size: 14px;
         text-decoration: none;
         padding: 6px 10px;
         margin-left: -10px;
         border-radius: 8px;
-        transition: transform 150ms var(--apple-spring), background-color 200ms ease;
-        will-change: transform;
+        transition: background-color 150ms ease;
     }
 
     .back-link:hover {
-        background: rgba(0, 122, 255, 0.08);
+        background: var(--accent-soft);
     }
 
-    .back-link:active {
-        transform: scale(0.96);
+    .detail-form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
     }
 
-    /* Badge Indicators for Attendance */
+    .styled-date-input {
+        width: 100%;
+        padding: 11px 14px;
+        font-size: 14px;
+        font-family: inherit;
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        outline: none;
+    }
+
     .status-badge {
         display: inline-block;
         padding: 4px 10px;
         border-radius: 12px;
         font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.02em;
+        font-weight: 700;
+        white-space: nowrap;
     }
 
     .status-present {
-        background: var(--success-bg);
-        color: var(--success-text);
-        border: 1px solid rgba(52, 199, 89, 0.2);
+        background: #dcfce7;
+        color: #15803d;
     }
 
     .status-absent {
-        background: rgba(142, 142, 147, 0.12);
-        color: var(--text-secondary);
-        border: 1px solid rgba(142, 142, 147, 0.2);
+        background: #fee2e2;
+        color: #b91c1c;
     }
 
-    .button-group {
+    .action-buttons-row {
         display: flex;
         gap: 12px;
+        margin-top: 8px;
+    }
+
+    @media (max-width: 640px) {
+        .detail-form-grid {
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+        .mobile-full-btn {
+            width: 100%;
+        }
     }
 </style>
 {% endblock %}

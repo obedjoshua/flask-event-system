@@ -29,6 +29,7 @@
             background-color: var(--bg-main);
             color: var(--text-primary);
             display: flex; min-height: 100vh;
+            overflow-x: hidden;
         }
 
         /* Sidebar */
@@ -36,12 +37,19 @@
             width: 250px; background: var(--sidebar-bg);
             border-right: 1px solid var(--border-color);
             display: flex; flex-direction: column; padding: 24px 16px;
+            flex-shrink: 0;
+            transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 200;
         }
 
         .brand-header {
-            display: flex; align-items: center; gap: 12px;
+            display: flex; align-items: center; justify-content: space-between;
             font-weight: 800; font-size: 16px; color: var(--text-primary);
             margin-bottom: 32px; padding: 0 8px; user-select: none;
+        }
+
+        .brand-left {
+            display: flex; align-items: center; gap: 12px;
         }
 
         .brand-icon {
@@ -51,9 +59,21 @@
             justify-content: center; color: #ffffff; font-size: 16px; cursor: pointer;
         }
 
+        .sidebar-close-btn {
+            display: none;
+            background: #f1f5f9;
+            color: var(--text-primary);
+            border: none;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
         .sidebar-nav { display: flex; flex-direction: column; gap: 6px; }
         .sidebar-nav a {
-            display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+            display: flex; align-items: center; gap: 12px; padding: 11px 14px;
             color: var(--text-secondary); text-decoration: none; font-size: 14px;
             font-weight: 600; border-radius: var(--radius-md);
             transition: all 150ms ease;
@@ -62,11 +82,47 @@
             background: var(--accent-soft); color: var(--accent-hover);
         }
 
-        main.content-area { flex: 1; display: flex; flex-direction: column; }
+        /* Mobile Drawer Backdrop */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(2px);
+            z-index: 190;
+        }
+        .sidebar-backdrop.open { display: block; }
+
+        main.content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* Prevents flex child blowout on mobile tables */
+        }
+
         header.topbar {
             height: 70px; display: flex; align-items: center;
             justify-content: space-between; padding: 0 32px;
+            gap: 12px;
         }
+
+        .topbar-left {
+            display: flex; align-items: center; gap: 12px;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: #ffffff;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .mobile-menu-btn:hover { background: #f8fafc; }
+
         .topbar-title { font-size: 20px; font-weight: 800; }
         .main-container { padding: 0 32px 32px 32px; flex: 1; }
         .panel-box {
@@ -74,7 +130,7 @@
             border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px;
         }
 
-        /* 1:1 Image 2 Custom Select / Dropdown */
+        /* Custom Select / Dropdown */
         .custom-dropdown-container {
             position: relative; display: inline-block; width: 100%;
         }
@@ -83,8 +139,15 @@
             width: 100%; padding: 10px 16px; background: #ffffff;
             border: 1px solid #000000; border-radius: 12px;
             display: flex; align-items: center; justify-content: space-between;
+            gap: 8px;
             font-size: 14px; font-weight: 600; cursor: pointer;
             user-select: none; transition: background 150ms ease;
+        }
+
+        .custom-dropdown-trigger .selected-label {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .custom-dropdown-trigger:hover { background: #f8fafc; }
@@ -93,7 +156,7 @@
             display: none; position: absolute; top: calc(100% + 6px);
             left: 0; width: 100%; background: #ffffff; border: 1px solid #000000;
             border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            z-index: 99; padding: 6px 0; overflow: hidden;
+            z-index: 99; padding: 6px 0; max-height: 240px; overflow-y: auto;
         }
 
         .custom-dropdown-menu.open { display: block; }
@@ -122,20 +185,80 @@
         button:hover { background: var(--accent-hover); }
         button.danger { background: var(--danger-color); }
 
-        table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+        /* Responsive Table Wrapper */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0; border: none; min-width: 540px; }
         th, td { padding: 14px 18px; border-bottom: 1px solid var(--border-color); text-align: left; font-size: 14px; }
-        th { background: #f8fafc; font-size: 12px; text-transform: uppercase; color: var(--text-secondary); }
+        th { background: #f8fafc; font-size: 12px; text-transform: uppercase; color: var(--text-secondary); white-space: nowrap; }
+        tr:last-child td { border-bottom: none; }
+
+        /* Mobile Breakpoints */
+        @media (max-width: 768px) {
+            aside.sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+                box-shadow: 10px 0 30px rgba(0, 0, 0, 0.12);
+            }
+            aside.sidebar.open {
+                transform: translateX(0);
+            }
+            .sidebar-close-btn {
+                display: inline-flex;
+            }
+            .mobile-menu-btn {
+                display: inline-flex;
+            }
+            header.topbar {
+                padding: 0 16px;
+                height: 62px;
+                background: #ffffff;
+                border-bottom: 1px solid var(--border-color);
+                position: sticky;
+                top: 0;
+                z-index: 150;
+            }
+            .topbar-title {
+                font-size: 17px;
+            }
+            .main-container {
+                padding: 16px;
+            }
+            .panel-box {
+                padding: 18px 16px;
+                border-radius: 14px;
+            }
+            th, td {
+                padding: 12px 14px;
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
-    <aside class="sidebar">
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar(false)"></div>
+
+    <aside class="sidebar" id="appSidebar">
         <div class="brand-header">
-            <span class="brand-icon" id="secretAdminTrigger">⚡</span> Attendance Pro
+            <div class="brand-left">
+                <span class="brand-icon" id="secretAdminTrigger">⚡</span> Attendance Pro
+            </div>
+            <button type="button" class="sidebar-close-btn" onclick="toggleMobileSidebar(false)" aria-label="Close Menu">✕</button>
         </div>
         <nav class="sidebar-nav">
             <a href="{{ url_for('events') }}" class="{% if active_page == 'events' %}active{% endif %}">📅 Events</a>
             <a href="{{ url_for('register') }}" class="{% if active_page == 'register' %}active{% endif %}">✍️ Registration</a>
             <a href="{{ url_for('attendance') }}" class="{% if active_page == 'attendance' %}active{% endif %}">✅ Mark Attendance</a>
+            <a href="{{ url_for('scanner') }}" class="{% if active_page == 'scanner' %}active{% endif %}">📷 QR Scanner</a>
             <a href="{{ url_for('summary') }}" class="{% if active_page == 'summary' %}active{% endif %}">📊 Analytics</a>
             <a href="{{ url_for('directory') }}" class="{% if active_page == 'directory' %}active{% endif %}">👥 Directory</a>
             {% if session.get('is_admin') %}
@@ -149,14 +272,20 @@
 
     <main class="content-area">
         <header class="topbar">
-            <div class="topbar-title">Management System</div>
+            <div class="topbar-left">
+                <button type="button" class="mobile-menu-btn" onclick="toggleMobileSidebar(true)" aria-label="Open Menu">☰</button>
+                <div class="topbar-title">Management System</div>
+            </div>
+            {% if session.get('is_admin') %}
+                <span style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;">🛡️ Admin</span>
+            {% endif %}
         </header>
 
         <div class="main-container">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div style="padding:12px; border-radius:8px; margin-bottom:16px; font-weight:600; {% if category == 'success' %}background:#dcfce7; color:#15803d;{% else %}background:#fee2e2; color:#b91c1c;{% endif %}">
+                        <div style="padding:12px 14px; border-radius:10px; margin-bottom:16px; font-weight:600; font-size:14px; {% if category == 'success' %}background:#dcfce7; color:#15803d;{% else %}background:#fee2e2; color:#b91c1c;{% endif %}">
                             {{ message }}
                         </div>
                     {% endfor %}
@@ -170,6 +299,18 @@
     </main>
 
     <script>
+        function toggleMobileSidebar(open) {
+            const sidebar = document.getElementById('appSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            if (open) {
+                sidebar.classList.add('open');
+                backdrop.classList.add('open');
+            } else {
+                sidebar.classList.remove('open');
+                backdrop.classList.remove('open');
+            }
+        }
+
         // Secret trigger for Admin Login
         let clickCount = 0, clickTimer = null;
         document.getElementById('secretAdminTrigger').addEventListener('click', function() {
@@ -179,7 +320,7 @@
             } else { clickTimer = setTimeout(() => { clickCount = 0; }, 1500); }
         });
 
-        // Global Custom Image 2 Dropdown Logic
+        // Global Custom Dropdown Logic
         function setupCustomDropdowns() {
             document.querySelectorAll('.custom-dropdown-container').forEach(container => {
                 const trigger = container.querySelector('.custom-dropdown-trigger');

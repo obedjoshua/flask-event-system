@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="analytics-top-bar" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+<div class="analytics-top-bar">
     <div>
         <a href="{{ url_for('summary') }}" class="no-print" style="color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 700;">← Back to Analytics Hub</a>
-        <h2 style="margin: 8px 0 4px 0; font-size: 24px; font-weight: 800;">{{ event.title }}</h2>
-        <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+        <h2 style="margin: 8px 0 4px 0; font-size: 22px; font-weight: 800;">{{ event.title }}</h2>
+        <p style="margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
             📅 {{ event.event_date }} &nbsp;•&nbsp; 📍 {{ event.venue }} &nbsp;•&nbsp; 👤 Host: <strong>{{ event.host_name if event.host_name else 'Unassigned' }}</strong>
         </p>
     </div>
 
     <!-- Action & Export Buttons -->
-    <div class="no-print" style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <div class="no-print export-actions-group">
         <a href="{{ url_for('export_event_csv', event_id=event.event_id) }}" class="btn export-btn-csv">
-            📄 Export Attendance CSV
+            📄 Export CSV
         </a>
         <button type="button" onclick="window.print()" class="btn export-btn-pdf">
-            📊 Export Graphs PDF
+            📊 Export PDF
         </button>
         <a href="{{ url_for('attendance', event_id=event.event_id) }}" class="btn">
             Update Attendance
@@ -45,7 +45,7 @@
     <!-- Graph Type 2: Stacked Horizontal Bar Chart (Seat Capacity Breakdown) -->
     <div class="chart-card">
         <h3 class="chart-title">Seat Capacity Allocation (Bar)</h3>
-        <div style="margin: 28px 0;">
+        <div style="margin: 24px 0;">
             <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 8px;">
                 <span>Booked: {{ total_reg }} / {{ event.capacity }}</span>
                 <span>{{ capacity_pct }}% Full</span>
@@ -96,42 +96,58 @@
 </div>
 
 <!-- Event Roster Data Table -->
-<h3 style="font-size: 16px; font-weight: 800; margin-top: 32px;">Event Participant Data</h3>
-<table>
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>Participant Name</th>
-            <th>Contact</th>
-            <th>Unique QR Code</th>
-            <th>Status</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for p in participants %}
-        <tr>
-            <td>{{ loop.index }}</td>
-            <td style="font-weight: 700;">{{ p.name }}</td>
-            <td>{{ p.contact }}</td>
-            <td style="font-family: monospace; font-size: 12px;">{{ p.qr_code }}</td>
-            <td>
-                <span style="padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px; {% if p.attendance_status == 'Present' %}background: #dcfce7; color: #15803d;{% else %}background: #fee2e2; color: #b91c1c;{% endif %}">
-                    {{ p.attendance_status }}
-                </span>
-            </td>
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 24px;">
-                No participants registered for this event.
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<h3 style="font-size: 16px; font-weight: 800; margin-top: 28px; margin-bottom: 12px;">Event Participant Data</h3>
+<div class="table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Participant Name</th>
+                <th>Contact</th>
+                <th>Unique QR Code</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in participants %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td style="font-weight: 700;">{{ p.name }}</td>
+                <td>{{ p.contact }}</td>
+                <td style="font-family: monospace; font-size: 12px;">{{ p.qr_code }}</td>
+                <td>
+                    <span style="padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px; {% if p.attendance_status == 'Present' %}background: #dcfce7; color: #15803d;{% else %}background: #fee2e2; color: #b91c1c;{% endif %}">
+                        {{ p.attendance_status }}
+                    </span>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                    No participants registered for this event.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 <style>
-    /* Export Button Styling */
+    .analytics-top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .export-actions-group {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
     .export-btn-csv {
         background: #0f172a;
         color: #ffffff;
@@ -147,8 +163,8 @@
 
     .charts-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
     }
 
     .chart-card {
@@ -187,12 +203,32 @@
     .bar-seg.absent { background: #f59e0b; }
 
     .chart-legend {
-        display: flex; justify-content: center; gap: 14px;
+        display: flex; justify-content: center; flex-wrap: wrap; gap: 12px;
         font-size: 12px; color: var(--text-secondary); margin-top: 12px;
     }
     .chart-legend i {
         display: inline-block; width: 10px; height: 10px;
         border-radius: 3px; margin-right: 4px; vertical-align: middle;
+    }
+
+    /* Mobile Adjustments */
+    @media (max-width: 640px) {
+        .export-actions-group {
+            width: 100%;
+        }
+        .export-actions-group .btn,
+        .export-actions-group button {
+            flex: 1 1 calc(50% - 5px);
+            padding: 10px 12px;
+            font-size: 13px;
+            text-decoration: none;
+        }
+        .export-actions-group a:last-child {
+            flex: 1 1 100%;
+        }
+        .charts-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     /* Clean PDF / Print Layout Rules */
@@ -206,7 +242,7 @@
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
-        aside.sidebar, header.topbar, .no-print {
+        aside.sidebar, header.topbar, .no-print, .sidebar-backdrop {
             display: none !important;
         }
         main.content-area, .main-container, .panel-box {
@@ -215,6 +251,10 @@
             border: none !important;
             box-shadow: none !important;
             width: 100% !important;
+        }
+        .table-responsive {
+            border: 1px solid var(--border-color) !important;
+            overflow: visible !important;
         }
         .charts-grid {
             grid-template-columns: repeat(3, 1fr) !important;

@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Create New Event</h2>
+<h2 style="margin-top: 0; font-size: 20px; font-weight: 800;">Create New Event</h2>
 
 <form method="POST" action="{{ url_for('events') }}">
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+    <div class="events-form-grid">
         <div class="form-group">
             <label for="title">Title</label>
             <input type="text" name="title" id="title" placeholder="e.g. IT Summit 2026" required>
         </div>
         
-        <!-- Image 1 Calendar Picker Trigger -->
+        <!-- Custom Calendar Picker Trigger -->
         <div class="form-group">
-            <label>Event Date (Must start 2+ Days from today)</label>
+            <label>Event Date (2+ Days from today)</label>
             <div class="calendar-trigger-btn" onclick="openDatePicker()">
                 <span id="displayDateText">Select Event Date</span>
                 <span>📅</span>
@@ -29,7 +29,7 @@
             <input type="number" name="capacity" id="capacity" min="1" placeholder="50" required>
         </div>
 
-        <!-- Image 2 Custom Host Dropdown -->
+        <!-- Custom Host Dropdown -->
         <div class="form-group">
             <label>Assigned Host</label>
             <div class="custom-dropdown-container">
@@ -48,45 +48,53 @@
         </div>
     </div>
 
-    <button type="submit" style="margin-top: 12px;">Create Event</button>
+    <button type="submit" class="mobile-full-btn" style="margin-top: 8px;">Create Event</button>
 </form>
 
 <hr style="margin: 32px 0; border: none; border-top: 1px solid var(--border-color);">
 
-<h2>Existing Events</h2>
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Date</th>
-            <th>Venue</th>
-            <th>Host</th>
-            <th>Capacity</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for event in events %}
-        <tr>
-            <td>{{ event.event_id }}</td>
-            <td style="font-weight: 700;">{{ event.title }}</td>
-            <td>{{ event.event_date }}</td>
-            <td>{{ event.venue }}</td>
-            <td>{{ event.host_name if event.host_name else 'Unassigned' }}</td>
-            <td>{{ event.total_registered }} / {{ event.capacity }}</td>
-            <td>
-                <a href="{{ url_for('event_detail', event_id=event.event_id) }}" style="color: var(--accent-hover); font-weight: 700;">
-                    Manage & Roster →
-                </a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<h2 style="font-size: 18px; font-weight: 800; margin-bottom: 14px;">Existing Events</h2>
+<div class="table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Date</th>
+                <th>Venue</th>
+                <th>Host</th>
+                <th>Capacity</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td>{{ event.event_id }}</td>
+                <td style="font-weight: 700;">{{ event.title }}</td>
+                <td style="white-space: nowrap;">{{ event.event_date }}</td>
+                <td>{{ event.venue }}</td>
+                <td>{{ event.host_name if event.host_name else 'Unassigned' }}</td>
+                <td style="white-space: nowrap;">{{ event.total_registered }} / {{ event.capacity }}</td>
+                <td style="white-space: nowrap;">
+                    <a href="{{ url_for('event_detail', event_id=event.event_id) }}" style="color: var(--accent-hover); font-weight: 700; text-decoration: none;">
+                        Manage & Roster →
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                    No events created yet.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
-<!-- 1:1 Image 1 Modal Date Picker Popover -->
-<div class="date-picker-overlay" id="datePickerModal">
+<!-- Modal Date Picker Popover -->
+<div class="date-picker-overlay" id="datePickerModal" onclick="if(event.target === this) this.classList.remove('open')">
     <div class="date-picker-card">
         <div class="dp-header">
             <div>
@@ -96,7 +104,7 @@
                     <select id="dpYearSelect" onchange="renderCalendar()"></select>
                 </div>
             </div>
-            <div class="dp-icon-badge">01</div>
+            <div class="dp-icon-badge" id="dpBadgeDay">01</div>
         </div>
 
         <div class="dp-weekdays">
@@ -105,11 +113,17 @@
 
         <div class="dp-days-grid" id="dpDaysGrid"></div>
 
-        <button class="dp-confirm-btn" onclick="confirmDateSelection()">Confirm</button>
+        <button type="button" class="dp-confirm-btn" onclick="confirmDateSelection()">Confirm</button>
     </div>
 </div>
 
 <style>
+    .events-form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 16px;
+    }
+
     .calendar-trigger-btn {
         width: 100%; padding: 11px 14px; background: #f8fafc;
         border: 1px solid var(--border-color); border-radius: var(--radius-md);
@@ -117,35 +131,37 @@
         font-size: 14px; font-weight: 600; cursor: pointer;
     }
 
-    /* 1:1 Image 1 Date Picker Component Styling */
+    /* Date Picker Component Styling */
     .date-picker-overlay {
-        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.3); z-index: 999; justify-content: center; align-items: center;
+        display: none; position: fixed; inset: 0;
+        background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(2px);
+        z-index: 999; justify-content: center; align-items: center;
+        padding: 16px;
     }
     .date-picker-overlay.open { display: flex; }
 
     .date-picker-card {
-        background: #ffffff; width: 340px; border-radius: 24px; padding: 24px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.15); font-family: inherit;
+        background: #ffffff; width: 100%; max-width: 340px; border-radius: 24px; padding: 22px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.18); font-family: inherit;
     }
 
-    .dp-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-    .dp-title { font-size: 24px; font-weight: 800; margin: 0 0 10px 0; color: #1e293b; }
-    .dp-selectors { display: flex; gap: 8px; }
+    .dp-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 8px; }
+    .dp-title { font-size: 22px; font-weight: 800; margin: 0 0 10px 0; color: #1e293b; }
+    .dp-selectors { display: flex; gap: 6px; flex-wrap: wrap; }
     .dp-selectors select {
-        background: #f1f5f9; border: none; padding: 6px 12px; border-radius: 10px;
-        font-size: 14px; font-weight: 700; color: #334155; cursor: pointer;
+        background: #f1f5f9; border: none; padding: 6px 10px; border-radius: 10px;
+        font-size: 13px; font-weight: 700; color: #334155; cursor: pointer;
     }
     .dp-icon-badge {
-        width: 50px; height: 50px; background: #f59e0b; border-radius: 12px;
-        color: #ffffff; font-size: 20px; font-weight: 800; display: flex;
+        width: 46px; height: 46px; flex-shrink: 0; background: #f59e0b; border-radius: 12px;
+        color: #ffffff; font-size: 18px; font-weight: 800; display: flex;
         align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(245,158,11,0.3);
     }
 
-    .dp-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 12px; }
-    .dp-weekdays span { font-size: 11px; font-weight: 800; color: #f59e0b; }
+    .dp-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 10px; }
+    .dp-weekdays span { font-size: 10px; font-weight: 800; color: #f59e0b; }
 
-    .dp-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; margin-bottom: 20px; }
+    .dp-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; margin-bottom: 18px; }
     .dp-day-cell {
         padding: 8px 0; font-size: 13px; font-weight: 700; color: #1e293b;
         border-radius: 8px; cursor: pointer; transition: all 100ms ease;
@@ -160,10 +176,19 @@
         padding: 12px; border-radius: 14px; font-size: 15px; font-weight: 800;
         cursor: pointer; box-shadow: 0 4px 12px rgba(245,158,11,0.3);
     }
+
+    @media (max-width: 640px) {
+        .events-form-grid {
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+        .mobile-full-btn {
+            width: 100%;
+        }
+    }
 </style>
 
 <script>
-    // Enforce Event Date Starting 2 Days From Today
     const minAllowedDate = new Date();
     minAllowedDate.setDate(minAllowedDate.getDate() + 2);
     minAllowedDate.setHours(0, 0, 0, 0);
@@ -203,6 +228,8 @@
         grid.innerHTML = '';
         const m = parseInt(document.getElementById('dpMonthSelect').value);
         const y = parseInt(document.getElementById('dpYearSelect').value);
+
+        document.getElementById('dpBadgeDay').innerText = String(selectedDate.getDate()).padStart(2, '0');
 
         const firstDay = new Date(y, m, 1).getDay();
         const daysInMonth = new Date(y, m + 1, 0).getDate();

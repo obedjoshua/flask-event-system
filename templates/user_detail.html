@@ -1,28 +1,28 @@
 {% extends "base.html" %}
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h2>Participant Profile: {{ participant.name }}</h2>
-    <a href="{{ url_for('directory') }}" style="color: var(--text-secondary); text-decoration: none; font-weight: 700;">← Back to Directory</a>
+<div class="profile-top-nav">
+    <h2 style="margin: 0; font-size: 20px; font-weight: 800;">Participant Profile: {{ participant.name }}</h2>
+    <a href="{{ url_for('directory') }}" style="color: var(--text-secondary); text-decoration: none; font-weight: 700; font-size: 14px; white-space: nowrap;">← Back to Directory</a>
 </div>
 
 <!-- User Info + Personal Master QR Code -->
-<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; background: #f8fafc; padding: 20px; border-radius: 14px; margin-bottom: 24px; border: 1px solid var(--border-color);">
+<div class="profile-hero-card">
     <div>
         <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; color: var(--text-secondary);">CONTACT INFORMATION</p>
-        <p style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700;">{{ participant.contact }}</p>
-        <span style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; font-family: monospace;">
+        <p style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; word-break: break-word;">{{ participant.contact }}</p>
+        <span style="display: inline-block; background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; font-family: monospace;">
             Master ID: {{ participant.user_qr }}
         </span>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 16px; background: #ffffff; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--border-color);">
+    <div class="master-qr-card">
         <div class="qr-click-box" onclick="openQrModal('{{ participant.user_qr }}', 'Personal Master Pass', '{{ participant.name }}', 'All Registered Events')" title="Click to enlarge QR">
             <div class="qr-render" data-qr="{{ participant.user_qr }}"></div>
-            <span class="zoom-hint">🔍 Click to Expand</span>
+            <span class="zoom-hint">🔍 Tap to Expand</span>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="master-qr-actions">
             <span style="font-size: 11px; font-weight: 800; color: var(--text-secondary);">PERSONAL USER QR</span>
-            <button type="button" style="padding: 8px 14px; font-size: 12px;"
+            <button type="button" style="padding: 9px 14px; font-size: 12px;"
                 onclick="downloadQrTemplate('{{ participant.user_qr }}', 'MASTER ACCESS PASS', '{{ participant.name }}', '{{ participant.contact }}', 'Valid across all registered events')">
                 ⬇ Download Pass
             </button>
@@ -30,51 +30,51 @@
     </div>
 </div>
 
-<h3>Registered Events (Click to Expand)</h3>
+<h3 style="font-size: 16px; font-weight: 800; margin-bottom: 14px;">Registered Events (Tap to Expand)</h3>
 
 <div style="display: flex; flex-direction: column; gap: 14px;">
     {% for evt in events %}
     <div class="expandable-event-card">
         <div class="event-card-header" onclick="toggleCard('evt-{{ evt.event_id }}')">
-            <div>
-                <span style="font-weight: 800; font-size: 16px;">{{ evt.title }}</span>
-                <span style="font-size: 12px; color: var(--text-secondary); margin-left: 10px;">📅 {{ evt.event_date }}</span>
+            <div class="event-header-info">
+                <span style="font-weight: 800; font-size: 15px;">{{ evt.title }}</span>
+                <span style="font-size: 12px; color: var(--text-secondary);">📅 {{ evt.event_date }}</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
                 <span style="padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px; {% if evt.attendance_status == 'Present' %}background: #dcfce7; color: #15803d;{% else %}background: #fee2e2; color: #b91c1c;{% endif %}">
                     {{ evt.attendance_status }}
                 </span>
-                <span>▼</span>
+                <span style="font-size: 12px;">▼</span>
             </div>
         </div>
 
         <div class="event-card-body" id="evt-{{ evt.event_id }}">
-            <div style="display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 20px; align-items: center;">
+            <div class="event-body-grid">
                 <div>
-                    <p style="margin: 6px 0;"><strong>Venue:</strong> {{ evt.venue }}</p>
-                    <p style="margin: 6px 0;"><strong>Assigned Host:</strong> {{ evt.host_name if evt.host_name else 'Unassigned' }}</p>
-                    <p style="margin: 6px 0;"><strong>Capacity Limit:</strong> {{ evt.capacity }}</p>
+                    <p style="margin: 6px 0; font-size: 14px;"><strong>Venue:</strong> {{ evt.venue }}</p>
+                    <p style="margin: 6px 0; font-size: 14px;"><strong>Assigned Host:</strong> {{ evt.host_name if evt.host_name else 'Unassigned' }}</p>
+                    <p style="margin: 6px 0; font-size: 14px;"><strong>Capacity Limit:</strong> {{ evt.capacity }}</p>
 
-                    <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;">
-                        <button type="button" style="padding: 9px 14px; font-size: 13px;"
+                    <div class="event-body-actions">
+                        <button type="button" class="mobile-full-btn" style="padding: 10px 14px; font-size: 13px;"
                             onclick="downloadQrTemplate('{{ evt.qr_code }}', '{{ evt.title }}', '{{ participant.name }}', 'Date: {{ evt.event_date }}', 'Venue: {{ evt.venue }}')">
                             ⬇ Download Ticket Template
                         </button>
 
-                        <form method="POST" action="{{ url_for('unregister_participant', registration_id=evt.registration_id) }}" style="margin: 0;">
-                            <button type="submit" class="danger" style="padding: 9px 14px; font-size: 13px;" onclick="return confirm('Unregister user from this event?')">
+                        <form method="POST" action="{{ url_for('unregister_participant', registration_id=evt.registration_id) }}" class="mobile-full-form">
+                            <button type="submit" class="danger mobile-full-btn" style="padding: 10px 14px; font-size: 13px;" onclick="return confirm('Unregister user from this event?')">
                                 Unregister User
                             </button>
                         </form>
                     </div>
                 </div>
 
-                <!-- Event-Specific Scannable QR Code (Click to Expand) -->
-                <div style="text-align: center; background: #ffffff; padding: 14px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <!-- Event-Specific Scannable QR Code (Tap to Expand) -->
+                <div class="event-qr-box">
                     <p style="font-size: 10px; font-weight: 800; color: var(--text-secondary); margin: 0 0 8px 0;">EVENT TICKET QR</p>
                     <div class="qr-click-box" onclick="openQrModal('{{ evt.qr_code }}', '{{ evt.title }}', '{{ participant.name }}', '{{ evt.event_date }} • {{ evt.venue }}')" title="Click to enlarge QR">
                         <div class="qr-render" data-qr="{{ evt.qr_code }}" style="display: inline-block;"></div>
-                        <span class="zoom-hint">🔍 Click to Expand</span>
+                        <span class="zoom-hint">🔍 Tap to Expand</span>
                     </div>
                     <p style="font-size: 11px; font-family: monospace; font-weight: 700; margin: 6px 0 0 0;">{{ evt.qr_code }}</p>
                 </div>
@@ -99,7 +99,7 @@
         <h3 id="modalEventTitle" style="margin: 4px 0; font-size: 18px; font-weight: 800;">Event Title</h3>
         <p id="modalParticipantName" style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-secondary);">Participant Name</p>
 
-        <div id="modalQrTarget" style="display: inline-block; padding: 16px; background: #ffffff; border: 2px solid #0f172a; border-radius: 16px; margin: 8px 0;"></div>
+        <div id="modalQrTarget" style="display: inline-block; padding: 14px; background: #ffffff; border: 2px solid #0f172a; border-radius: 16px; margin: 8px 0;"></div>
 
         <p id="modalQrCodeText" style="font-family: monospace; font-size: 14px; font-weight: 800; margin: 10px 0 4px 0; letter-spacing: 0.05em;"></p>
         <p id="modalEventMeta" style="font-size: 12px; color: var(--text-secondary); margin: 0 0 18px 0;"></p>
@@ -112,11 +112,88 @@
 <div id="hiddenQrGenerator" style="display: none;"></div>
 
 <style>
+    .profile-top-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .profile-hero-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+        background: #f8fafc;
+        padding: 20px;
+        border-radius: 14px;
+        margin-bottom: 24px;
+        border: 1px solid var(--border-color);
+    }
+
+    .master-qr-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: #ffffff;
+        padding: 14px 18px;
+        border-radius: 14px;
+        border: 1px solid var(--border-color);
+    }
+
+    .master-qr-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
     .expandable-event-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
-    .event-card-header { padding: 16px 20px; background: #ffffff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+    .event-card-header {
+        padding: 16px 18px;
+        background: #ffffff;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        user-select: none;
+    }
     .event-card-header:hover { background: #f8fafc; }
-    .event-card-body { display: none; padding: 20px; background: #f8fafc; border-top: 1px solid var(--border-color); }
+
+    .event-header-info {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .event-card-body { display: none; padding: 18px; background: #f8fafc; border-top: 1px solid var(--border-color); }
     .event-card-body.open { display: block; }
+
+    .event-body-grid {
+        display: grid;
+        grid-template-columns: 1.8fr 1.2fr;
+        gap: 20px;
+        align-items: center;
+    }
+
+    .event-body-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+        flex-wrap: wrap;
+    }
+
+    .event-qr-box {
+        text-align: center;
+        background: #ffffff;
+        padding: 14px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
 
     .qr-click-box {
         cursor: pointer;
@@ -152,7 +229,7 @@
         width: 100%;
         max-width: 360px;
         border-radius: 24px;
-        padding: 24px;
+        padding: 22px;
         text-align: center;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         animation: popIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -162,6 +239,23 @@
         from { opacity: 0; transform: scale(0.94); }
         to { opacity: 1; transform: scale(1); }
     }
+
+    @media (max-width: 680px) {
+        .master-qr-card {
+            width: 100%;
+            justify-content: space-between;
+        }
+        .event-body-grid {
+            grid-template-columns: 1fr;
+        }
+        .event-qr-box {
+            order: -1; /* Shows QR ticket immediately at the top on mobile */
+        }
+        .mobile-full-form,
+        .mobile-full-btn {
+            width: 100%;
+        }
+    }
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -170,7 +264,6 @@
         document.getElementById(id).classList.toggle('open');
     }
 
-    // Render all inline QR thumbnails on load
     document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll(".qr-render").forEach(el => {
             const code = el.getAttribute("data-qr");
@@ -187,7 +280,6 @@
         });
     });
 
-    // Open Enlarged Modal
     function openQrModal(code, eventTitle, participantName, metaText) {
         document.getElementById('modalEventTitle').innerText = eventTitle;
         document.getElementById('modalParticipantName').innerText = participantName;
@@ -196,10 +288,11 @@
 
         const target = document.getElementById('modalQrTarget');
         target.innerHTML = '';
+        const modalQrSize = window.innerWidth < 380 ? 175 : 210;
         new QRCode(target, {
             text: code,
-            width: 210,
-            height: 210,
+            width: modalQrSize,
+            height: modalQrSize,
             colorDark: "#0f172a",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
@@ -218,7 +311,6 @@
         }
     }
 
-    // Generate & Download Branded Pass Template (PNG)
     function downloadQrTemplate(code, title, participantName, line1, line2) {
         const hiddenDiv = document.getElementById('hiddenQrGenerator');
         hiddenDiv.innerHTML = '';
@@ -240,18 +332,15 @@
             canvas.height = 820;
             const ctx = canvas.getContext('2d');
 
-            // Background Card
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Top Brand Header Banner (Amber Gradient)
             const grad = ctx.createLinearGradient(0, 0, 600, 140);
             grad.addColorStop(0, '#f59e0b');
             grad.addColorStop(1, '#d97706');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, 600, 140);
 
-            // Header Text
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 28px sans-serif';
             ctx.textAlign = 'center';
@@ -259,41 +348,34 @@
             ctx.font = '600 16px sans-serif';
             ctx.fillText('OFFICIAL ENTRY & VERIFICATION PASS', 300, 102);
 
-            // Event / Pass Title
             ctx.fillStyle = '#0f172a';
             ctx.font = 'bold 28px sans-serif';
             ctx.fillText(title.toUpperCase(), 300, 205);
 
-            // Participant Name
             ctx.fillStyle = '#4f46e5';
             ctx.font = 'bold 24px sans-serif';
             ctx.fillText(participantName, 300, 250);
 
-            // QR Code Frame
             ctx.strokeStyle = '#e2e8f0';
             ctx.lineWidth = 4;
             ctx.strokeRect(150, 290, 300, 300);
             ctx.drawImage(qrCanvas, 170, 310, 260, 260);
 
-            // Token String
             ctx.fillStyle = '#0f172a';
             ctx.font = 'bold 22px monospace';
             ctx.fillText(code, 300, 635);
 
-            // Metadata Lines
             ctx.fillStyle = '#64748b';
             ctx.font = '600 17px sans-serif';
             if (line1) ctx.fillText(line1, 300, 685);
             if (line2) ctx.fillText(line2, 300, 715);
 
-            // Footer Border
             ctx.fillStyle = '#f8fafc';
             ctx.fillRect(0, 760, 600, 60);
             ctx.fillStyle = '#94a3b8';
             ctx.font = '600 14px sans-serif';
             ctx.fillText('Present this QR code at the event scanner for instant check-in', 300, 795);
 
-            // Trigger Download
             const link = document.createElement('a');
             const safeName = participantName.replace(/[^a-z0-9]/gi, '_');
             link.download = `${safeName}_${code}_Pass.png`;

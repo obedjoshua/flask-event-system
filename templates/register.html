@@ -1,18 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Register Participant</h2>
+<h2 style="margin-top: 0; font-size: 20px; font-weight: 800;">Register Participant</h2>
+<p style="font-size: 13px; color: var(--text-secondary); margin-top: -8px; margin-bottom: 24px;">
+    Enroll a participant into an upcoming event and generate their unique entry QR code.
+</p>
 
-<form method="POST" action="{{ url_for('register') }}">
+<form method="POST" action="{{ url_for('register') }}" class="register-form">
     <div class="form-group">
-        <label for="event_id">Select Event</label>
-        <select name="event_id" id="event_id" required>
-            <option value="" disabled selected>-- Choose an Event --</option>
-            {% for event in events %}
-                <option value="{{ event.event_id }}">
-                    {{ event.title }} ({{ event.event_date }})
-                </option>
-            {% endfor %}
-        </select>
+        <label>Select Event</label>
+        <div class="custom-dropdown-container">
+            <div class="custom-dropdown-trigger">
+                <span class="selected-label">-- Choose an Event --</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <input type="hidden" name="event_id" id="event_id" value="" required>
+            <div class="custom-dropdown-menu">
+                {% for event in events %}
+                    <div class="custom-dropdown-item" data-value="{{ event.event_id }}">
+                        {{ event.title }} ({{ event.event_date }})
+                    </div>
+                {% else %}
+                    <div class="custom-dropdown-item" data-value="">No events available</div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 
     <div class="form-group">
@@ -26,30 +37,22 @@
     </div>
 
     <div style="margin-top: 24px;">
-        <button type="submit">Submit Registration</button>
+        <button type="submit" class="mobile-full-btn">Submit Registration</button>
     </div>
 </form>
 
 <style>
-    /* Composite-only interaction styling & custom dropdown tweaks */
-    select {
-        appearance: none;
-        -webkit-appearance: none;
-        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%206c6c70' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: right 14px center;
-        background-size: 16px;
-        padding-right: 40px;
-        cursor: pointer;
+    .register-form {
+        max-width: 520px;
     }
 
-    button {
-        will-change: transform;
-        transition: transform 150ms var(--apple-spring), background-color 200ms ease;
-    }
-
-    button:active {
-        transform: scale(0.96);
+    @media (max-width: 640px) {
+        .register-form {
+            max-width: 100%;
+        }
+        .mobile-full-btn {
+            width: 100%;
+        }
     }
 </style>
 {% endblock %}
